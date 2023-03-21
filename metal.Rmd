@@ -1,0 +1,103 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Loading the Data
+```{r}
+df = read.csv("metal.csv")
+```
+```{r}
+summary(df)
+head(df)
+```
+```{r}
+#removing new lines from all of the lyrics
+df$X = gsub("\n", " ", df$X)
+```
+```{r}
+#rename X column to lyrics
+colnames(df)[colnames(df) == "X"] ="Lyrics"
+```
+```{r}
+#rename column 2 for readability
+colnames(df)[2] ="Artist.Name"
+```
+```{r}
+#checking for null values
+colSums(is.na(df))
+```
+# Data Visualizations
+```{r}
+library(ggplot2)
+ggplot(df, aes(y = Artist.Name, fill = Artist.Name)) + geom_bar()
+```
+```{r}
+ggplot(df, aes(Explicit, fill = Explicit)) + geom_bar()
+```
+```{r}
+y = format(as.Date(df$Album.Release.Date, format= "%m/%d/%Y"), "%Y")
+```
+```{r}
+na = is.na(y)
+```
+```{r}
+x = as.numeric(df$Album.Release.Date)
+```
+```{r}
+x = as.character(x)
+```
+
+```{r}
+y[na] = x[na]
+```
+```{r}
+df$Album.Release.Year = y
+```
+
+```{r}
+ggplot(df, aes(Album.Release.Year, fill = Album.Release.Year)) + geom_bar()
+```
+# Word Clouds
+
+```{r}
+library(tm)
+library(SnowballC)
+corpus = VCorpus(VectorSource((df$Lyrics)))
+as.character(corpus[[1]])
+```
+```{r}
+corpus_clean = tm_map(corpus, content_transformer(tolower))
+corpus_clean = tm_map(corpus_clean, removeNumbers)
+corpus_clean = tm_map(corpus_clean, removeWords, stopwords())
+
+replacePunctuation = function(x){
+  gsub("[[:punct:]]+", " ", x)
+}
+
+corpus_clean = tm_map(corpus_clean, content_transformer(replacePunctuation))
+corpus_clean = tm_map(corpus_clean, stripWhitespace)
+```
+```{r}
+as.character(corpus_clean[[1]])
+```
+```{r}
+#trying word cloud before and after stemming
+library(wordcloud)
+wordcloud(corpus_clean, max.words = 100, scale = c(3, 0.5), random.order = FALSE)
+```
+```{r}
+corpus_clean = tm_map(corpus_clean, stemDocument)
+wordcloud(corpus_clean, max.words = 100, scale = c(3, 0.5), random.order = FALSE)
+```
+```{r}
+myTdm = as.matrix(TermDocumentMatrix(corpus_clean))
+FreqMat = data.frame(ST = rownames(myTdm), 
+                     Freq = rowSums(myTdm),
+                     row.names=NULL)
+#head(FreqMat)
+ordered_freq = FreqMat[order(-FreqMat$Freq),]
+ordered_freq
+```
+
+
